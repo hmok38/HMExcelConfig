@@ -4,3 +4,5 @@
 /Temp
 /*.csproj
 /*.sln
+/.idea
+/*.user
