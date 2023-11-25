@@ -35,8 +35,8 @@ namespace HmExcelConfigEditor
             }
         }
 
-        [Header("Excel表路径")] public string ExcelFilePath = "Excel/";
-        [Header("Protobuf 类输出路径")]public string CodePath="Assets/ConfigCode/";
+        [Header("Excel表路径")] public string ExcelFilePath = "Excel";
+        [Header("Protobuf 类输出路径")]public string CodePath="Assets/ConfigCode";
         [Header("数据输出路径")]public string DataFilePath="Assets/Bundles/Config";
         [Header("代码模版(管理类)路径")] public string codeTemplatePath = "Assets/HmExcelConfig/Editor/ConfigCategory.cs.template";
         

@@ -1,13 +1,13 @@
 ﻿using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using OfficeOpenXml;
-using ProtoBuf;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -18,7 +18,7 @@ namespace HmExcelConfigEditor
     {
         public static string DataClassTemplate = @"using System.Collections.Generic;
 using ProtoBuf;
-using HmExcelConfig;
+using HMExcelConfig;
 
 /// <summary> 数据来源:[filepath] </summary>
 [ProtoContract]
@@ -121,10 +121,17 @@ public class [classname]:IExcelConfig
             progressCB?.Invoke(0.9f, "解析完毕,准备写入");
             //全部完成了,写入文件
 
-            var codeAsembly = GetAssembly(codeMap.Values.ToArray(), out string error);
+            //var codeAsembly = GetAssembly(codeMap.Values.ToArray(), out string error);
+            var codeAsembly = CompileAndRunCode(codeMap.Values.ToArray(), out string error);
             if (!string.IsNullOrEmpty(error))
             {
                 return $"动态生成代码发生错误:" + error;
+            }
+
+            var types = codeAsembly.GetTypes();
+            for (int i = 0; i < types.Length; i++)
+            {
+                Debug.Log(types[i].FullName);
             }
 
             foreach (var codeKV in codeMap)
@@ -168,7 +175,7 @@ public class [classname]:IExcelConfig
                     return false;
                 }
 
-                Serializer.NonGeneric.PrepareSerializer(type);
+                //  Serializer.NonGeneric.PrepareSerializer(type);
                 WriteToProbufDataFile(mainObjs, configInfo.className, "", protoDataDir, type, out error);
                 if (!string.IsNullOrEmpty(error))
                 {
@@ -405,33 +412,81 @@ public class [classname]:IExcelConfig
         }
 
 
-        private static Assembly GetAssembly(string[] code, out string error)
+        // private static Assembly GetAssembly(string[] code, out string error)
+        // {
+        //     SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code);
+        //     //var codeProvider = new CSharpCodeProvider();
+        //
+        //     var icc = codeProvider.CreateCompiler();
+        //
+        //     System.CodeDom.Compiler.CompilerParameters parameters = new CompilerParameters();
+        //     parameters.GenerateExecutable = false;
+        //     parameters.GenerateInMemory = true;
+        //
+        //     var assems = AppDomain.CurrentDomain.GetAssemblies();
+        //     for (int i = 0; i < assems.Length; i++)
+        //     {
+        //         if (assems[i].IsDynamic || string.IsNullOrEmpty(assems[i].Location)) continue;
+        //         parameters.ReferencedAssemblies.Add(assems[i].Location);
+        //     }
+        //
+        //
+        //     CompilerResults results = icc.CompileAssemblyFromSourceBatch(parameters, code);
+        //     error = "";
+        //     if (results.CompiledAssembly == null)
+        //     {
+        //         error = results.Errors.HasErrors ? results.Errors[0].ErrorText : "未知错误";
+        //     }
+        //
+        //     return results.CompiledAssembly;
+        // }
+
+
+        static Assembly CompileAndRunCode(string[] codes, out string error)
         {
- 
-            var codeProvider = new CSharpCodeProvider();
-    
-            var icc = codeProvider.CreateCompiler();
-
-            System.CodeDom.Compiler.CompilerParameters parameters = new CompilerParameters();
-            parameters.GenerateExecutable = false;
-            parameters.GenerateInMemory = true;
-
-            var assems = AppDomain.CurrentDomain.GetAssemblies();
-            for (int i = 0; i < assems.Length; i++)
+            
+            SyntaxTree[] trees = new SyntaxTree[codes.Length] ;
+            for (int i = 0; i < codes.Length; i++)
             {
-                if (assems[i].IsDynamic || string.IsNullOrEmpty(assems[i].Location)) continue;
-                parameters.ReferencedAssemblies.Add(assems[i].Location);
+                trees[i] = CSharpSyntaxTree.ParseText(codes[i]);
             }
+            
+            var compilation =
+                CSharpCompilation.Create("DynamicAssembly").AddReferences(AppDomain.CurrentDomain.GetAssemblies()
+                        .Where(x => !x.IsDynamic && !string.IsNullOrWhiteSpace(x.Location))
+                        .Select(x => MetadataReference.CreateFromFile(x.Location)))
+                    .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+                    .AddSyntaxTrees(trees);
 
 
-            CompilerResults results = icc.CompileAssemblyFromSourceBatch(parameters, code);
-            error = "";
-            if (results.CompiledAssembly == null)
+            EmitResult result = null;
+            byte[] dllBytes;
+           
+            using (var ms = new System.IO.MemoryStream())
             {
-                error = results.Errors.HasErrors ? results.Errors[0].ErrorText : "未知错误";
+                result = compilation.Emit(ms);
+                dllBytes = ms.ToArray();
             }
+            
+            if (!result.Success)
+            {
+                var failures = result.Diagnostics.Where(diagnostic =>
+                    diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error);
+                error = "动态编译错误: ";
+                foreach (var diagnostic in failures)
+                {
+                    error += $"{diagnostic.Id}: {diagnostic.GetMessage()}";
+                 
+                }
 
-            return results.CompiledAssembly;
+                return null;
+            }
+            else
+            {
+                error = "";
+                return Assembly.Load(dllBytes);
+
+            }
         }
 
 
