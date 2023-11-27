@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace HmExcelConfig
+namespace HMExcelConfig
 {
     public abstract class ExcelConfigCategoryBase
     {

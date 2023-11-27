@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9d6d4cd7586e853438dd2669e1c5d5d9, type: 3}
-  m_Name: HmExcelConfigSetting
+  m_Name: HMExcelConfigSetting
   m_EditorClassIdentifier: 
   ExcelFilePath: Excel
   CodePath: Assets/ConfigCode
   DataFilePath: Assets/Bundles/Config
-  codeTemplatePath: Assets/HmExcelConfig/Editor/ConfigCategory.cs.template
+  codeTemplatePath: Assets/HMExcelConfigSetting/ConfigCategory.cs.template

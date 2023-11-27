@@ -1,30 +1,30 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Debug = UnityEngine.Debug;
-using Object = UnityEngine.Object;
 
-namespace HmExcelConfigEditor
+namespace HMExcelConfigEditor
 {
-    public class HmExcelConfigEditor : UnityEditor.EditorWindow
+    public class HMExcelConfigEditor : UnityEditor.EditorWindow
     {
-        [MenuItem("HmExcelConfig/OpenConfig")]
+        [MenuItem("HMExcelConfig/OpenConfig")]
         public static void OpenConfig()
         {
-            var window = GetWindow<HmExcelConfigEditor>();
-            window.titleContent = new GUIContent("HmExcelConfig工具");
+            var window = GetWindow<HMExcelConfigEditor>();
+            window.titleContent = new GUIContent("HMExcelConfig工具");
         }
 
 
         private async void OnGUI()
         {
-            var configSetting = HmExcelConfigSetting.Instance;
-            if (configSetting == null) return;
+            var configSetting = HMExcelConfigSetting.Instance;
+            if (configSetting == null)
+            {
+                GUILayout.Label($"编译时发生错误,请检查在 {HMExcelConfigSetting.ConfigPath} 是否存在配置表,且配置表正常");
+                return;
+            }
 
             GUILayout.Space(30);
 
@@ -110,15 +110,15 @@ namespace HmExcelConfigEditor
 
             if (GUILayout.Button("生成代码和数据", GUILayout.Width(250), GUILayout.Height(60)))
             {
-                UnityEditor.EditorUtility.DisplayProgressBar("HmExcelConfigEditor正在生成Code", "正在生成Code,请稍候", 0f);
+                UnityEditor.EditorUtility.DisplayProgressBar("HMExcelConfigEditor正在生成Code", "正在生成Code,请稍候", 0f);
                 string result = "";
                 try
                 {
                     result = await ExcelHelper.ExportAllExcelToCode(configSetting.ExcelFilePath, configSetting.CodePath,
-                        configSetting.codeTemplatePath, configSetting.DataFilePath,
+                        HMExcelConfigSetting.CodeTemplatePath, configSetting.DataFilePath,
                         (progress, str) =>
                         {
-                            UnityEditor.EditorUtility.DisplayProgressBar("HmExcelConfigEditor正在生成Code", str, progress);
+                            UnityEditor.EditorUtility.DisplayProgressBar("HMExcelConfigEditor正在生成Code", str, progress);
                         });
                 }
                 catch (Exception e)
@@ -139,6 +139,8 @@ namespace HmExcelConfigEditor
                 UnityEditor.EditorUtility.ClearProgressBar();
                 return;
             }
+            
+            GUILayout.Label($"配置文件模版在:{HMExcelConfigSetting.CodeTemplatePath},如需修改可直接修改并重新生成代码和数据即可");
         }
 
         private string CheckFolderPath(string path)

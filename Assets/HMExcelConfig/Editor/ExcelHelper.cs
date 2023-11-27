@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.Events;
 
 
-namespace HmExcelConfigEditor
+namespace HMExcelConfigEditor
 {
     public class ExcelHelper
     {
