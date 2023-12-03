@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using OfficeOpenXml;
+using ProtoBuf;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -318,6 +320,7 @@ public class [classname]:IExcelConfig
                 using (var ms = new System.IO.FileStream(path,
                            FileMode.OpenOrCreate))
                 {
+                    //ProtoBuf.Serializer.SerializeWithLengthPrefix(ms, csDatas,PrefixStyle.Fixed32);
                     ProtoBuf.Serializer.Serialize(ms, csDatas);
                 }
 
@@ -354,12 +357,36 @@ public class [classname]:IExcelConfig
                 case "uint[]":
                 case "bool[]":
                 case "long[]":
-                case "float[]":
+                    case "float[]":
                 case "double[]":
                 case "string[]":
                 {
                     string baseType = typeStr.Replace("[", "").Replace("]", "");
                     var strs = valueStr.Split(',');
+                    if (typeStr.Equals("string[]"))
+                    {
+                        var regex = new Regex("\",");
+                        strs = regex.Split(valueStr);
+                        
+                        for (int i = 0; i < strs.Length; i++)
+                        {
+                            //如果前后是"就移除前后的"
+                            if (strs[i].StartsWith("\"") )
+                            {
+                                var old = strs[i];
+                                strs[i] = old.Substring(1, old.Length - 1);
+                                
+                                //最后一个的话,要把结尾的"去掉
+                                if (i == strs.Length - 1&&strs[i].EndsWith("\"") )
+                                {
+                                    old = strs[i];
+                                    strs[i] = old.Substring(0, old.Length - 1);
+                                }
+                            }
+                            
+                        }
+                    }
+
                     Type type = GetBaseType(baseType, out string typeResult);
                     if (type == null)
                     {
@@ -444,13 +471,12 @@ public class [classname]:IExcelConfig
 
         static Assembly CompileAndRunCode(string[] codes, out string error)
         {
-            
-            SyntaxTree[] trees = new SyntaxTree[codes.Length] ;
+            SyntaxTree[] trees = new SyntaxTree[codes.Length];
             for (int i = 0; i < codes.Length; i++)
             {
                 trees[i] = CSharpSyntaxTree.ParseText(codes[i]);
             }
-            
+
             var compilation =
                 CSharpCompilation.Create("DynamicAssembly").AddReferences(AppDomain.CurrentDomain.GetAssemblies()
                         .Where(x => !x.IsDynamic && !string.IsNullOrWhiteSpace(x.Location))
@@ -461,13 +487,13 @@ public class [classname]:IExcelConfig
 
             EmitResult result = null;
             byte[] dllBytes;
-           
+
             using (var ms = new System.IO.MemoryStream())
             {
                 result = compilation.Emit(ms);
                 dllBytes = ms.ToArray();
             }
-            
+
             if (!result.Success)
             {
                 var failures = result.Diagnostics.Where(diagnostic =>
@@ -476,7 +502,6 @@ public class [classname]:IExcelConfig
                 foreach (var diagnostic in failures)
                 {
                     error += $"{diagnostic.Id}: {diagnostic.GetMessage()}";
-                 
                 }
 
                 return null;
@@ -485,7 +510,6 @@ public class [classname]:IExcelConfig
             {
                 error = "";
                 return Assembly.Load(dllBytes);
-
             }
         }
 

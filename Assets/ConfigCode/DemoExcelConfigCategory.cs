@@ -3,20 +3,20 @@ using System.Collections.Generic;
 using HMExcelConfig;
 using UnityEngine;
 
-public partial class UnitConfigCategory : ExcelConfigCategoryBase
+public partial class DemoExcelConfigCategory : ExcelConfigCategoryBase
 {
-    private static UnitConfigCategory _instance;
-    public static UnitConfigCategory Instance => _instance;
-    private readonly Dictionary<int, UnitConfig> _configMap = new Dictionary<int, UnitConfig>();
-    public Dictionary<int, UnitConfig> ConfigMap => this._configMap;
+    private static DemoExcelConfigCategory _instance;
+    public static DemoExcelConfigCategory Instance => _instance;
+    private readonly Dictionary<int, DemoExcelConfig> _configMap = new Dictionary<int, DemoExcelConfig>();
+    public Dictionary<int, DemoExcelConfig> ConfigMap => this._configMap;
     public int AllConfigCount => this._configMap.Count;
     
-    public UnitConfigCategory()
+    public DemoExcelConfigCategory()
     {
-        this.dataPath = "Assets/Bundles/Config/UnitConfig.bytes";
-        this.haveVariant = false;
-        this.VariantNames = new string[] {};
-        UnitConfigCategory._instance = this;
+        this.dataPath = "Assets/Bundles/Config/variant/[variantName]/DemoExcelConfig.bytes";
+        this.haveVariant = true;
+        this.VariantNames = new string[] {"Demo1","Demo2"};
+        DemoExcelConfigCategory._instance = this;
     }
         
 
@@ -31,15 +31,15 @@ public partial class UnitConfigCategory : ExcelConfigCategoryBase
                 using (var ms = new System.IO.MemoryStream(datas))
                 {
                     ms.Position = 0;
-                    List<UnitConfig> configs =
-                        ProtoBuf.Serializer.Deserialize<List<UnitConfig>>(ms);
+                    List<DemoExcelConfig> configs =
+                        ProtoBuf.Serializer.Deserialize<List<DemoExcelConfig>>(ms);
                    
                     for (var i = 0; i < configs.Count; i++)
                     {
                         var config = configs[i];
 
                         if (_configMap.ContainsKey(config.Id))
-                            Debug.LogError($"配置表 UnitConfig 中有相同Id:{config.Id.ToString()}");
+                            Debug.LogError($"配置表 DemoExcelConfig 中有相同Id:{config.Id.ToString()}");
                         else
                         {
                             _configMap.Add(config.Id, config);
@@ -49,7 +49,7 @@ public partial class UnitConfigCategory : ExcelConfigCategoryBase
             }
             catch (Exception e)
             {
-                Debug.LogError($"解析 UnitConfig 时发生错误:" + e);
+                Debug.LogError($"解析 DemoExcelConfig 时发生错误:" + e);
                 return false;
             }
         }
@@ -58,7 +58,7 @@ public partial class UnitConfigCategory : ExcelConfigCategoryBase
         return true;
     }
 
-    public UnitConfig GetConfig(int id)
+    public DemoExcelConfig GetConfig(int id)
     {
         if (this._configMap.ContainsKey(id))
         {
