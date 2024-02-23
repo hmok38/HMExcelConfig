@@ -1,5 +1,37 @@
 {
   "dependencies": {
+    "com.cysharp.unitask": {
+      "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.3.3",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "b992a061fbf68ff1eb475d0837065b0549ed31ba"
+    },
+    "com.hm.hmaddressable": {
+      "version": "https://github.com/hmok38/hmaddressable.git?path=Assets/HMAddressable",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.addressables": "1.20.5",
+        "com.unity.nuget.newtonsoft-json": "3.1.0",
+        "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"
+      },
+      "hash": "d06746c02834c696f7be87d6ae951933aebeea45"
+    },
+    "com.unity.addressables": {
+      "version": "1.20.5",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.scriptablebuildpipeline": "1.20.2",
+        "com.unity.modules.assetbundle": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0",
+        "com.unity.modules.unitywebrequestassetbundle": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
     "com.unity.collab-proxy": {
       "version": "2.0.1",
       "depth": 0,
@@ -35,6 +67,20 @@
     "com.unity.ide.vscode": {
       "version": "1.2.5",
       "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.1.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.scriptablebuildpipeline": {
+      "version": "1.20.2",
+      "depth": 2,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"

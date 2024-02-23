@@ -1,0 +1,6 @@
+<linker>
+    <assembly fullname="protobuf-net">
+    </assembly>>
+    <assembly fullname="protobuf-net.Core">
+    </assembly>>
+</linker>

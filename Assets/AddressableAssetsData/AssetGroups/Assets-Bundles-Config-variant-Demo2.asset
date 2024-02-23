@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Assets-Bundles-Config-variant-Demo2
+  m_EditorClassIdentifier: 
+  m_GroupName: Assets-Bundles-Config-variant-Demo2
+  m_Data:
+    m_SerializedData: []
+  m_GUID: b3c3352e54ce2a4469d8eb04246f437d
+  m_SerializeEntries:
+  - m_GUID: 0dcd2f21492c2684ba55c1bf9a3b4d69
+    m_Address: Assets/Bundles/Config/variant/Demo2/DemoExcelConfig.bytes
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Assets/Bundles/Config/variant/Demo2
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 5d89a65d5bda32d45bb1f98c9482218a, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 3842674c90f28244b9aa425d7d661f11, type: 2}
+    - {fileID: 11400000, guid: 3fb483489bc3d21469d78f1050165e2e, type: 2}
