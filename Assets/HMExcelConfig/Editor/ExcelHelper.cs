@@ -72,7 +72,7 @@ public class [classname]:IExcelConfig
 
                     var className = GetClassNameAndVariantName(vFile.FullName, out string variantName);
 
-                    progressCB?.Invoke(((float) (i + 1) / files.Length) * 0.9f, $"正在解析 {className}  {variantName} ");
+                    progressCB?.Invoke(((float)(i + 1) / files.Length) * 0.9f, $"正在解析 {className}  {variantName} ");
                     ConfigInfo info = null;
                     if (configMap.ContainsKey(className))
                     {
@@ -357,7 +357,7 @@ public class [classname]:IExcelConfig
                 case "uint[]":
                 case "bool[]":
                 case "long[]":
-                    case "float[]":
+                case "float[]":
                 case "double[]":
                 case "string[]":
                 {
@@ -367,23 +367,22 @@ public class [classname]:IExcelConfig
                     {
                         var regex = new Regex("\",");
                         strs = regex.Split(valueStr);
-                        
+
                         for (int i = 0; i < strs.Length; i++)
                         {
                             //如果前后是"就移除前后的"
-                            if (strs[i].StartsWith("\"") )
+                            if (strs[i].StartsWith("\""))
                             {
                                 var old = strs[i];
                                 strs[i] = old.Substring(1, old.Length - 1);
-                                
+
                                 //最后一个的话,要把结尾的"去掉
-                                if (i == strs.Length - 1&&strs[i].EndsWith("\"") )
+                                if (i == strs.Length - 1 && strs[i].EndsWith("\""))
                                 {
                                     old = strs[i];
                                     strs[i] = old.Substring(0, old.Length - 1);
                                 }
                             }
-                            
                         }
                     }
 
@@ -655,10 +654,14 @@ public class [classname]:IExcelConfig
                 Debug.LogError($"主表没有字段,变种表也没有字段,{filePath}");
             }
 
+            DirectoryInfo directoryInfo = new DirectoryInfo(Application.dataPath);
+            var dirFullName = directoryInfo.Parent.FullName + Path.DirectorySeparatorChar;
             var className = GetClassNameAndVariantName(filePath, out string variantName);
             var classCode = DataClassTemplate;
             classCode = classCode.Replace("[classname]", className);
-            classCode = classCode.Replace("[filepath]", filePath);
+
+            var path = filePath.Replace(dirFullName, ""); //移除项目根目录以上的路径
+            classCode = classCode.Replace("[filepath]", path);
             for (int i = 0; i < fieldInfos.Count; i++)
             {
                 var field = fieldInfos[i];

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using ProtoBuf;
 using HMExcelConfig;
 
-/// <summary> 数据来源:D:\Code\Framework\HMExcelConfig\Excel\DemoExcelConfig.xlsx </summary>
+/// <summary> 数据来源:Excel\DemoExcelConfig.xlsx </summary>
 [ProtoContract]
 public class DemoExcelConfig:IExcelConfig
 {
