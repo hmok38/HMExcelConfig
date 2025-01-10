@@ -228,7 +228,7 @@ public class [classname]:IExcelConfig
 
             var idDatas = fieldInfos[0].datas;
             error = "";
-
+            Debug.Log($"正在处理数据:{className}  varateName:{varateName}");
             //没有数据就不写?
             //if (idDatas.Length == 0) return true;
 
@@ -255,6 +255,7 @@ public class [classname]:IExcelConfig
 
                         propertyInfoMap.Add(fieldInfo.name, property);
                     }
+
 
                     var obj = GetObjectByValue(fieldInfo.typeStr, fieldInfo.datas[i], out string errorTemp);
                     if (!string.IsNullOrEmpty(errorTemp))
@@ -343,80 +344,96 @@ public class [classname]:IExcelConfig
                 return null;
             }
 
-            error = "";
-            switch (typeStr)
+            try
             {
-                case "string": return valueStr;
-                case "int": return int.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
-                case "uint": return uint.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
-                case "bool": return bool.Parse(string.IsNullOrWhiteSpace(valueStr) ? "false" : valueStr);
-                case "long": return long.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
-                case "float": return float.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
-                case "double": return double.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
-                case "int[]":
-                case "uint[]":
-                case "bool[]":
-                case "long[]":
-                case "float[]":
-                case "double[]":
-                case "string[]":
+                error = "";
+                switch (typeStr)
                 {
-                    string baseType = typeStr.Replace("[", "").Replace("]", "");
-                    var strs = valueStr.Split(',');
-                    if (typeStr.Equals("string[]"))
+                    case "string": return valueStr;
+                    case "int": return int.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
+                    case "uint": return uint.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
+                    case "bool": return bool.Parse(string.IsNullOrWhiteSpace(valueStr) ? "false" : valueStr);
+                    case "long": return long.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
+                    case "float": return float.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
+                    case "double": return double.Parse(string.IsNullOrWhiteSpace(valueStr) ? "0" : valueStr);
+                    case "int[]":
+                    case "uint[]":
+                    case "bool[]":
+                    case "long[]":
+                    case "float[]":
+                    case "double[]":
+                    case "string[]":
                     {
-                        var regex = new Regex("\",");
-                        strs = regex.Split(valueStr);
-
-                        for (int i = 0; i < strs.Length; i++)
+                        string baseType = typeStr.Replace("[", "").Replace("]", "");
+                        var strs = valueStr.Split(',');
+                        if (typeStr.Equals("string[]"))
                         {
-                            //如果前后是"就移除前后的"
-                            if (strs[i].StartsWith("\""))
+                            if (valueStr.Length > 0 && (!valueStr.StartsWith("\"") || !valueStr.EndsWith("\"")))
                             {
-                                var old = strs[i];
-                                strs[i] = old.Substring(1, old.Length - 1);
+                                error =
+                                    ($"字符串数组中的值必须前后有冒号,值: {(string.IsNullOrWhiteSpace(valueStr) ? "空白符" : valueStr)}");
+                                return null;
+                            }
 
-                                //最后一个的话,要把结尾的"去掉
-                                if (i == strs.Length - 1 && strs[i].EndsWith("\""))
+                            var regex = new Regex("\",");
+                            strs = regex.Split(valueStr);
+
+                            for (int i = 0; i < strs.Length; i++)
+                            {
+                                //如果前后是"就移除前后的"
+                                if (strs[i].StartsWith("\""))
                                 {
-                                    old = strs[i];
-                                    strs[i] = old.Substring(0, old.Length - 1);
+                                    var old = strs[i];
+                                    strs[i] = old.Substring(1, old.Length - 1);
+
+                                    //最后一个的话,要把结尾的"去掉
+                                    if (i == strs.Length - 1 && strs[i].EndsWith("\""))
+                                    {
+                                        old = strs[i];
+                                        strs[i] = old.Substring(0, old.Length - 1);
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Type type = GetBaseType(baseType, out string typeResult);
-                    if (type == null)
-                    {
-                        error = $"类型{typeStr}的基础类型错误:" + typeResult;
-                        return null;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(valueStr))
-                    {
-                        return Array.CreateInstance(type, 0);
-                    }
-
-                    var array = Array.CreateInstance(type, strs.Length);
-                    for (int i = 0; i < array.Length; i++)
-                    {
-                        var obj = GetObjectByValue(baseType, strs[i], out string thisError);
-                        if (!string.IsNullOrEmpty(thisError))
+                        Type type = GetBaseType(baseType, out string typeResult);
+                        if (type == null)
                         {
-                            error = $"类型{typeStr}的{valueStr}转数据错误:" + thisError;
+                            error = $"类型{typeStr}的基础类型错误:" + typeResult;
                             return null;
                         }
 
-                        array.SetValue(obj, i);
+                        if (string.IsNullOrWhiteSpace(valueStr))
+                        {
+                            return Array.CreateInstance(type, 0);
+                        }
+
+                        var array = Array.CreateInstance(type, strs.Length);
+                        for (int i = 0; i < array.Length; i++)
+                        {
+                            var obj = GetObjectByValue(baseType, strs[i], out string thisError);
+                            if (!string.IsNullOrEmpty(thisError))
+                            {
+                                error = $"类型 {typeStr} 的值 ({valueStr}) 转数据错误:" + thisError;
+                                return null;
+                            }
+
+                            array.SetValue(obj, i);
+                        }
+
+                        return array;
                     }
-
-                    return array;
                 }
-            }
 
-            error = $"不支持此类型{typeStr}";
-            return null;
+                error = $"不支持此类型{typeStr}";
+                return null;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"类型 {typeStr} 的值 ({valueStr}) 转数据错误 {e.ToString()}");
+                error = $"类型 {typeStr} 的值 ({valueStr}) 转数据错误 {e.ToString()}";
+                return null;
+            }
         }
 
         private static Type GetBaseType(string typeStr, out string result)
