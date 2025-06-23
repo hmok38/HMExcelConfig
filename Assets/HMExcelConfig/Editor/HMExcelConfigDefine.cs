@@ -11,7 +11,19 @@ using UnityEngine;
 public partial class [classname]Category : ExcelConfigCategoryBase
 {
     private static [classname]Category _instance;
-    public static [classname]Category Instance => _instance;
+    private static [classname]Category Instance
+    {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new [classname]Category();
+                }
+    
+                return _instance;
+            }
+            set => _instance = value;
+    }
     private readonly Dictionary<[idtype], [classname]> _configMap = new Dictionary<[idtype], [classname]>();
     public Dictionary<[idtype], [classname]> ConfigMap => this._configMap;
     public int AllConfigCount => this._configMap.Count;
@@ -21,7 +33,7 @@ public partial class [classname]Category : ExcelConfigCategoryBase
         this.dataPath = ""[dataUrl]"";
         this.haveVariant = [haveVariant];
         this.VariantNames = new string[] {[VariantNames]};
-        [classname]Category._instance = this;
+        //[classname]Category._instance = this;
     }
         
 
