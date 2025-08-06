@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using OfficeOpenXml;
 using ProtoBuf;
@@ -530,7 +532,7 @@ public class [classname]:IExcelConfig
         }
 
 
-        private static string GetExcelData(string excelFilePath, ref ConfigInfo configInfo)
+        public static string GetExcelData(string excelFilePath, ref ConfigInfo configInfo)
         {
             var fileName = Path.GetFileName(excelFilePath);
             if (!fileName.EndsWith(".xlsx") || fileName.StartsWith("~$") || fileName.Contains("#"))
@@ -808,7 +810,7 @@ public class [classname]:IExcelConfig
             return true;
         }
 
-        private class FieldInfo
+        public class FieldInfo
         {
             public string name;
             public string typeStr;
@@ -816,7 +818,7 @@ public class [classname]:IExcelConfig
             public string[] datas;
         }
 
-        private class ConfigInfo
+        public class ConfigInfo
         {
             public string className;
             public List<FieldInfo> classFieldInfos;
@@ -832,6 +834,83 @@ public class [classname]:IExcelConfig
             public Type dataClassType;
 
             public string categoryCode;
+        }
+
+        /// <summary>
+        /// 导出excel表到json,一定是数组
+        /// </summary>
+        /// <param name="excelPath"></param>
+        /// <returns></returns>
+        public static string ExportExcelToJson(string excelPath)
+        {
+            if (!File.Exists(excelPath))
+            {
+                Debug.LogError("不存在Excel文件:" + excelPath);
+                return null;
+            }
+
+            UnityEditor.EditorUtility.DisplayProgressBar("正在读取excel", "正在读取Excel文件:" + excelPath, 0.1f);
+            ConfigInfo configInfo = new ConfigInfo();
+            var info = GetExcelData(excelPath, ref configInfo);
+            int dataCount = configInfo.classFieldInfos[0].datas.Length;
+            UnityEditor.EditorUtility.DisplayProgressBar("正在读取excel", "转换数据", 0.5f);
+            List<Dictionary<string, object>> datas = new List<Dictionary<string, object>>();
+            for (int i = 0; i < dataCount; i++)
+            {
+                Dictionary<string, object> map = new Dictionary<string, object>();
+                for (int fieldIndex = 0; fieldIndex < configInfo.classFieldInfos.Count; fieldIndex++)
+                {
+                    var sFieldInfo = configInfo.classFieldInfos[fieldIndex];
+                    if (sFieldInfo.typeStr.Contains('[') || sFieldInfo.typeStr.Contains(']'))
+                    {
+                        Debug.LogError($"不支持数组类型导出到Json 字段名:{sFieldInfo.name} 类型:{sFieldInfo.typeStr}");
+                        UnityEditor.EditorUtility.ClearProgressBar();
+                        return null;
+                    }
+
+                    var obj = GetObjectByValue(sFieldInfo.typeStr, sFieldInfo.datas[i], out string error);
+                    map.Add(sFieldInfo.name, obj);
+                }
+
+                datas.Add(map);
+            }
+
+            UnityEditor.EditorUtility.DisplayProgressBar("正在读取excel", "正在转换json", 0.6f);
+            try
+            {
+                var a = Newtonsoft.Json.JsonConvert.SerializeObject(datas);
+                UnityEditor.EditorUtility.ClearProgressBar();
+                return a;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"导出Json失败,错误信息:{e.ToString()}");
+                UnityEditor.EditorUtility.ClearProgressBar();
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// 导出excel数据到类,一定是传入类的List
+        /// </summary>
+        /// <param name="excelPath"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static List<T> ExportExcelToClass<T>(string excelPath) where T : class
+        {
+            var json = ExportExcelToJson(excelPath);
+            if (string.IsNullOrEmpty(json)) return null;
+            try
+            {
+                var list = Newtonsoft.Json.JsonConvert.DeserializeObject<List<T>>(json);
+                Debug.Log($"list : {(list != null ? ("数据量 " + list.Count.ToString()) : "为空")}");
+                return list;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"导出Excel数据到类失败,错误信息:{e.ToString()}");
+                return null;
+            }
         }
     }
 }

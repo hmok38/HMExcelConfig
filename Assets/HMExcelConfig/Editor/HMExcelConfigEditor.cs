@@ -16,6 +16,29 @@ namespace HMExcelConfigEditor
             window.titleContent = new GUIContent("HMExcelConfig工具");
         }
 
+        [MenuItem("HMExcelConfig/导出excel到类演示")]
+        public static void Test()
+        {
+            Debug.Log("可以根据需要写接口,将Excel导出为类,然后保存到SO或者预制体中,记得要保存修改  EditorUtility.SetDirty()");
+            var list = ExcelHelper.ExportExcelToClass<TestClass>("Excel\\PhaseTaskConig.xlsx");
+        }
+
+        public class TestClass
+        {
+            public string Id;
+            public string CycleType;
+            public int phaseId;
+
+            /// <summary>
+            /// 这个是excel表中没有的字段,不会报错,会被赋值为默认值
+            /// </summary>
+            public int phaseId2;
+
+            /// <summary>
+            /// 这个是excel表中没有的字段,不会报错,会被赋值为默认值
+            /// </summary>
+            public string phaseId3;
+        }
 
         private async void OnGUI()
         {
@@ -125,7 +148,7 @@ namespace HMExcelConfigEditor
                 {
                     result = e.ToString();
                 }
-              
+
                 if (string.IsNullOrEmpty(result))
                 {
                     Debug.Log($"生成Code结束,输出的目录在 {configSetting.CodePath}");
@@ -139,7 +162,7 @@ namespace HMExcelConfigEditor
                 UnityEditor.EditorUtility.ClearProgressBar();
                 return;
             }
-            
+
             GUILayout.Label($"配置文件模版在:{HMExcelConfigSetting.CodeTemplatePath},如需修改可直接修改并重新生成代码和数据即可");
         }
 
@@ -175,14 +198,14 @@ namespace HMExcelConfigEditor
                     if (projectBrowserViewMode != null)
                     {
                         // 0 - one column, 1 - two column
-                        int viewMode = (int) projectBrowserViewMode.GetValue(lastProjectBrowserInstance);
+                        int viewMode = (int)projectBrowserViewMode.GetValue(lastProjectBrowserInstance);
                         if (viewMode == 1)
                         {
                             MethodInfo showFolderContents = projectBrowserType.GetMethod("ShowFolderContents",
                                 BindingFlags.NonPublic | BindingFlags.Instance);
                             if (showFolderContents != null)
                             {
-                                var objs = AssetDatabase.FindAssets("", new[] {folderPath});
+                                var objs = AssetDatabase.FindAssets("", new[] { folderPath });
                                 if (objs.Length > 0)
                                 {
                                     UnityEditor.EditorGUIUtility.PingObject(
