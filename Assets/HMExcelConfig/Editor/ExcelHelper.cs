@@ -42,7 +42,7 @@ public class [classname]:IExcelConfig
 
         public static async Task<string> ExportAllExcelToCode(string excelDir, string codeFileDir,
             string categoryCodeTemplatePath,
-            string protoDataDir, UnityAction<float, string> progressCB = null)
+            string protoDataDir, string jsonDataDir, UnityAction<float, string> progressCB = null)
         {
             //找出所有的excel文件
             if (!Directory.Exists(excelDir)) return "不存在目录:" + excelDir;
@@ -149,7 +149,7 @@ public class [classname]:IExcelConfig
                     return $"没有找到{codeKV.Key}的数据";
                 }
 
-                if (!WriteDataToProtobuf(configInfo, type, protoDataDir, out string protoError))
+                if (!WriteDataToProtobuf(configInfo, type, protoDataDir, jsonDataDir, out string protoError))
                 {
                     return $"写入{codeKV.Key}的数据时发生错误: {protoError}";
                 }
@@ -165,7 +165,9 @@ public class [classname]:IExcelConfig
             return "";
         }
 
-        private static bool WriteDataToProtobuf(ConfigInfo configInfo, Type type, string protoDataDir, out string error)
+        private static bool WriteDataToProtobuf(ConfigInfo configInfo, Type type, string protoDataDir,
+            string jsonDataDir,
+            out string error)
         {
             var propertyInfoMap = new Dictionary<string, PropertyInfo>();
 
@@ -185,6 +187,12 @@ public class [classname]:IExcelConfig
                 {
                     return false;
                 }
+
+                WriteToJsonDataFile(mainObjs, configInfo.className, "", jsonDataDir, out error);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    return false;
+                }
             }
 
 
@@ -198,7 +206,14 @@ public class [classname]:IExcelConfig
                     return false;
                 }
 
-                WriteToProbufDataFile(tempObjs, configInfo.className, VARIABLE.Key, protoDataDir, type, out error);
+                WriteToProbufDataFile(tempObjs, configInfo.className, VARIABLE.Key, protoDataDir, type,
+                    out error);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    return false;
+                }
+
+                WriteToJsonDataFile(tempObjs, configInfo.className, VARIABLE.Key, jsonDataDir, out error);
                 if (!string.IsNullOrEmpty(error))
                 {
                     return false;
@@ -327,7 +342,44 @@ public class [classname]:IExcelConfig
                     ProtoBuf.Serializer.Serialize(ms, csDatas);
                 }
 
+                error = "";
+                return true;
+            }
+            catch (Exception e)
+            {
+                error = e.ToString();
+                return false;
+            }
+        }
 
+        private static bool WriteToJsonDataFile(Array csDatas, string className, string varateName, string protoDataDir,
+            out string error)
+        {
+            try
+            {
+                string dir = "";
+                if (!string.IsNullOrEmpty(varateName))
+                {
+                    dir = Path.Combine(protoDataDir, "variant", varateName);
+                }
+                else
+                {
+                    dir = protoDataDir;
+                }
+
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                var path = Path.Combine(dir, className + ".json");
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(csDatas, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(path, json, Encoding.UTF8);
                 error = "";
                 return true;
             }
