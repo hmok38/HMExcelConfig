@@ -110,9 +110,19 @@ namespace HMExcelConfigEditor
                 }
             }
 
+            GUILayout.Space(20);
+            var jsonFilePathStr = EditorGUILayout.TextField("Json数据输出路径:", configSetting.JsonFilePath);
+            if (GUILayout.Button($"打开目录", GUILayout.Width(100)))
+            {
+                if (!Directory.Exists(configSetting.JsonFilePath))
+                {
+                    Directory.CreateDirectory(configSetting.JsonFilePath);
+                }
+
+                UnityEditor.EditorUtility.RevealInFinder(configSetting.JsonFilePath);
+            }
+
             GUILayout.Space(30);
-
-
             if (!excelFilePathStr.Equals(configSetting.ExcelFilePath))
             {
                 configSetting.ExcelFilePath = CheckFolderPath(excelFilePathStr);
@@ -131,6 +141,12 @@ namespace HMExcelConfigEditor
                 UnityEditor.EditorUtility.SetDirty(configSetting);
             }
 
+            if (!jsonFilePathStr.Equals(configSetting.JsonFilePath))
+            {
+                configSetting.JsonFilePath = CheckFolderPath(jsonFilePathStr);
+                UnityEditor.EditorUtility.SetDirty(configSetting);
+            }
+
             if (GUILayout.Button("生成代码和数据", GUILayout.Width(250), GUILayout.Height(60)))
             {
                 UnityEditor.EditorUtility.DisplayProgressBar("HMExcelConfigEditor正在生成Code", "正在生成Code,请稍候", 0f);
@@ -138,7 +154,7 @@ namespace HMExcelConfigEditor
                 try
                 {
                     result = await ExcelHelper.ExportAllExcelToCode(configSetting.ExcelFilePath, configSetting.CodePath,
-                        HMExcelConfigSetting.CodeTemplatePath, configSetting.DataFilePath,
+                        HMExcelConfigSetting.CodeTemplatePath, configSetting.DataFilePath, configSetting.JsonFilePath,
                         (progress, str) =>
                         {
                             UnityEditor.EditorUtility.DisplayProgressBar("HMExcelConfigEditor正在生成Code", str, progress);

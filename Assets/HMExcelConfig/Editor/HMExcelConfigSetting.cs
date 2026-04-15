@@ -56,6 +56,7 @@ namespace HMExcelConfigEditor
 
         [Header("Excel表路径")] public string ExcelFilePath = "Excel";
         [Header("Protobuf 类输出路径")]public string CodePath="Assets/ConfigCode";
+        [Header("Json 输出路径")]public string JsonFilePath="ExcelJson";
         [Header("数据输出路径")]public string DataFilePath="Assets/Bundles/Config";
         
     }

@@ -1,12 +1,12 @@
 {
   "name": "com.hm.hmexcelconfig",
   "displayName": "HM Excel Config Package",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "unity": "2020.3",
   "author":{ "name" : "HuangMin",
     "email" : "hmok@163.com"
   },
-  "description": "Excel转Probuf的插件,可以根据配置表名字和内容自动生成C#类和数据资源(二进制),使用简单功能完善",
+  "description": "Excel转Probuf的插件,可以根据配置表名字和内容自动生成C#类和数据资源(二进制),使用简单功能完善,新增同步输出Json数据",
   "dependencies": {
   }
 }
