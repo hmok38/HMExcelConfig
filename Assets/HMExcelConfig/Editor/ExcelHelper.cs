@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -20,6 +21,8 @@ namespace HMExcelConfigEditor
 {
     public class ExcelHelper
     {
+        public const string ExcelHashRecordFileName = "HMExcelConfigHashes.json";
+
         public static string DataClassTemplate = @"using System.Collections.Generic;
 using ProtoBuf;
 using HMExcelConfig;
@@ -44,10 +47,56 @@ public class [classname]:IExcelConfig
             string categoryCodeTemplatePath,
             string protoDataDir, string jsonDataDir, UnityAction<float, string> progressCB = null)
         {
-            //找出所有的excel文件
             if (!Directory.Exists(excelDir)) return "不存在目录:" + excelDir;
-            var excelDirInfo = new DirectoryInfo(excelDir);
-            var files = excelDirInfo.GetFiles();
+
+            return await ExportSelectedExcelToCode(excelDir, GetExcelFiles(excelDir).Select(file => file.FullName),
+                codeFileDir, categoryCodeTemplatePath, protoDataDir, jsonDataDir, progressCB);
+        }
+
+        /// <summary>
+        /// 导出选中的Excel。主表和变体表共用同一个配置类，选中其中任意一个时会自动导出整个配置组。
+        /// </summary>
+        public static async Task<string> ExportSelectedExcelToCode(string excelDir,
+            IEnumerable<string> selectedExcelFilePaths, string codeFileDir, string categoryCodeTemplatePath,
+            string protoDataDir, string jsonDataDir, UnityAction<float, string> progressCB = null)
+        {
+            if (!Directory.Exists(excelDir)) return "不存在目录:" + excelDir;
+            if (selectedExcelFilePaths == null) return "没有选择需要导出的Excel文件";
+
+            var allFiles = GetExcelFiles(excelDir);
+            var allFileMap = allFiles.ToDictionary(file => Path.GetFullPath(file.FullName),
+                file => file, StringComparer.OrdinalIgnoreCase);
+            var selectedPaths = new HashSet<string>(selectedExcelFilePaths
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
+            if (selectedPaths.Count == 0) return "没有选择需要导出的Excel文件";
+
+            foreach (var selectedPath in selectedPaths)
+            {
+                if (!allFileMap.ContainsKey(selectedPath))
+                {
+                    return $"选择的Excel文件不在配置目录中或文件类型不正确:{selectedPath}";
+                }
+            }
+
+            var selectedClassNames = new HashSet<string>(selectedPaths
+                .Select(path => GetClassNameAndVariantName(path, out _)), StringComparer.Ordinal);
+            var files = allFiles
+                .Where(file => selectedClassNames.Contains(GetClassNameAndVariantName(file.FullName, out _)))
+                .ToArray();
+
+            var exportedHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var file in files)
+                {
+                    exportedHashes[GetExcelHashRecordKey(excelDir, file.FullName)] = CalculateExcelFileHash(file.FullName);
+                }
+            }
+            catch (Exception e)
+            {
+                return "计算Excel文件Hash失败:" + e;
+            }
 
             if (!File.Exists(categoryCodeTemplatePath)) return "不存在代码模版路径:" + categoryCodeTemplatePath;
             var categoryCodeTemplate = File.ReadAllText(categoryCodeTemplatePath);
@@ -67,7 +116,7 @@ public class [classname]:IExcelConfig
 
                     //跳过其他文件
                     var fileName = Path.GetFileName(vFile.FullName);
-                    if (!fileName.EndsWith(".xlsx") || fileName.StartsWith("~$") || fileName.Contains("#"))
+                    if (!IsExcelConfigFile(fileName))
                     {
                         continue;
                     }
@@ -161,8 +210,125 @@ public class [classname]:IExcelConfig
                 if (!string.IsNullOrEmpty(result)) return result;
             }
 
+            var hashResult = SaveExcelHashRecord(jsonDataDir, exportedHashes);
+            if (!string.IsNullOrEmpty(hashResult)) return hashResult;
 
             return "";
+        }
+
+        /// <summary>
+        /// 获取配置目录下会参与导出的Excel文件。与原导出逻辑一致，只读取当前目录。
+        /// </summary>
+        public static FileInfo[] GetExcelFiles(string excelDir)
+        {
+            if (!Directory.Exists(excelDir)) return Array.Empty<FileInfo>();
+
+            return new DirectoryInfo(excelDir).GetFiles()
+                .Where(file => IsExcelConfigFile(file.Name))
+                .OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        public static string GetExcelHashRecordPath(string jsonDataDir)
+        {
+            return Path.Combine(jsonDataDir, ExcelHashRecordFileName);
+        }
+
+        public static string GetExcelHashRecordKey(string excelDir, string excelFilePath)
+        {
+            var excelDirectoryPath = Path.GetFullPath(excelDir)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var excelFullPath = Path.GetFullPath(excelFilePath);
+            var prefix = excelDirectoryPath + Path.DirectorySeparatorChar;
+            if (excelFullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return excelFullPath.Substring(prefix.Length).Replace('\\', '/');
+            }
+
+            return Path.GetFileName(excelFullPath);
+        }
+
+        public static string CalculateExcelFileHash(string excelFilePath)
+        {
+            using (var md5 = MD5.Create())
+            using (var stream = new FileStream(excelFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                var hash = md5.ComputeHash(stream);
+                var builder = new StringBuilder(hash.Length * 2);
+                foreach (var value in hash)
+                {
+                    builder.Append(value.ToString("x2"));
+                }
+
+                return builder.ToString();
+            }
+        }
+
+        public static Dictionary<string, string> LoadExcelHashRecord(string jsonDataDir, out string error)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var recordPath = GetExcelHashRecordPath(jsonDataDir);
+            if (!File.Exists(recordPath))
+            {
+                error = "";
+                return result;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(recordPath, Encoding.UTF8);
+                var records = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                if (records != null)
+                {
+                    foreach (var record in records)
+                    {
+                        result[record.Key.Replace('\\', '/')] = record.Value;
+                    }
+                }
+
+                error = "";
+            }
+            catch (Exception e)
+            {
+                error = $"读取Hash记录失败:{recordPath}\n{e.Message}";
+            }
+
+            return result;
+        }
+
+        private static string SaveExcelHashRecord(string jsonDataDir,
+            IReadOnlyDictionary<string, string> exportedHashes)
+        {
+            try
+            {
+                var records = LoadExcelHashRecord(jsonDataDir, out _);
+                foreach (var exportedHash in exportedHashes)
+                {
+                    records[exportedHash.Key] = exportedHash.Value;
+                }
+
+                if (!Directory.Exists(jsonDataDir))
+                {
+                    Directory.CreateDirectory(jsonDataDir);
+                }
+
+                var sortedRecords = new SortedDictionary<string, string>(records, StringComparer.OrdinalIgnoreCase);
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(sortedRecords,
+                    Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(GetExcelHashRecordPath(jsonDataDir), json, new UTF8Encoding(false));
+                return "";
+            }
+            catch (Exception e)
+            {
+                return "保存Excel文件Hash记录失败:" + e;
+            }
+        }
+
+        private static bool IsExcelConfigFile(string fileName)
+        {
+            return fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                   && !fileName.StartsWith("~$", StringComparison.Ordinal)
+                   && !fileName.Contains("#");
         }
 
         private static bool WriteDataToProtobuf(ConfigInfo configInfo, Type type, string protoDataDir,
@@ -587,7 +753,7 @@ public class [classname]:IExcelConfig
         public static string GetExcelData(string excelFilePath, ref ConfigInfo configInfo)
         {
             var fileName = Path.GetFileName(excelFilePath);
-            if (!fileName.EndsWith(".xlsx") || fileName.StartsWith("~$") || fileName.Contains("#"))
+            if (!IsExcelConfigFile(fileName))
             {
                 return "文件类型不正确:" + excelFilePath;
             }
